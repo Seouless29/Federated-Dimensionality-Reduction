@@ -36,3 +36,6 @@ class ClassificationModel:
             raise ValueError("The model has not been built yet. Call build_model() first.")
         
         self.model.fit(self.x_train, self.y_train, epochs=epochs, batch_size=batch_size)
+    
+    def evaluate_model(self, verbose = 0):
+        pass

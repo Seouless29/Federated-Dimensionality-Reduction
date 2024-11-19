@@ -75,37 +75,22 @@ def balanced_dirichlet_partition(dataset, partitions_number=10, alpha=0.5, seed=
     """
     np.random.seed(seed)
     
-    # Extract targets (labels) from the dataset
     y_train = dataset.targets
-    
-    # Number of classes in the dataset
     num_classes = len(np.unique(y_train))
-    
-    # Initialize the map that will store the indices for each partition
     net_dataidx_map = {}
-    
-    # Initialize lists to store the indices for each class
     class_indices = {k: np.where(y_train == k)[0] for k in range(num_classes)}
-    
-    # Shuffle the indices within each class to ensure random distribution
     for k in class_indices.keys():
         np.random.shuffle(class_indices[k])
     
     # Ensure that each partition gets at least one sample from each class
-    min_size = 10  # Ensuring each class has at least 10 samples in each partition
+    min_size = 10  
     idx_batch = [[] for _ in range(partitions_number)]
-
-    # Assign at least `min_size` samples from each class to every partition
     for k in range(num_classes):
-        # Split the class indices equally across the partitions
         split = np.array_split(class_indices[k], partitions_number)
         for i in range(partitions_number):
             idx_batch[i].extend(split[i][:min_size])
-
-        # Remove the samples that were assigned equally
         class_indices[k] = class_indices[k][min_size*partitions_number:]
 
-    # Now distribute the remaining samples using the Dirichlet distribution
     for k in range(num_classes):
         remaining_indices = class_indices[k]
         proportions = np.random.dirichlet(np.repeat(alpha, partitions_number))
@@ -115,23 +100,19 @@ def balanced_dirichlet_partition(dataset, partitions_number=10, alpha=0.5, seed=
         for i in range(partitions_number):
             idx_batch[i].extend(split_remaining[i])
 
-    # Shuffle the indices within each partition
     for i in range(partitions_number):
         np.random.shuffle(idx_batch[i])
         net_dataidx_map[i] = idx_batch[i]
 
-    # If clustering is not required, return partitions
     if num_clusters is None:
         return net_dataidx_map
 
-    # Step 1: Compute label distributions for each partition
     label_distributions = np.zeros((partitions_number, num_classes))
     for i, indices in net_dataidx_map.items():
         labels = y_train[indices]
         label_counts = np.bincount(labels, minlength=num_classes)
         label_distributions[i] = label_counts
 
-    # Step 2: Assign partitions to clusters based on label distributions
     cluster_assignments = np.zeros(partitions_number, dtype=int)
     cluster_label_totals = np.zeros((num_clusters, num_classes))
 
@@ -142,7 +123,6 @@ def balanced_dirichlet_partition(dataset, partitions_number=10, alpha=0.5, seed=
         cluster_assignments[partition_id] = best_cluster
         cluster_label_totals[best_cluster] += label_dist
 
-    # Step 3: Map partitions to clusters and return
     clustered_net_dataidx_map = {}
     for i in range(partitions_number):
         cluster_id = cluster_assignments[i]
@@ -150,7 +130,6 @@ def balanced_dirichlet_partition(dataset, partitions_number=10, alpha=0.5, seed=
             clustered_net_dataidx_map[cluster_id] = []
         clustered_net_dataidx_map[cluster_id].append(net_dataidx_map[i])
 
-    # Add cluster assignments metadata
     clustered_net_dataidx_map["cluster_assignments"] = cluster_assignments.tolist()
 
     return clustered_net_dataidx_map
@@ -168,10 +147,6 @@ def reformat_dataset(partition_dataset):
     x_train = np.array(x_train)
     y_train = np.array(y_train)
     
-    # Check shapes to confirm they match the original structure
-    print("x_train shape:", x_train.shape)  # Should match the shape (num_samples, 784) if flattened
-    print("y_train shape:", y_train.shape)  # Should match the shape (num_samples,)
-    
+    print("x_train shape:", x_train.shape)  
+    print("y_train shape:", y_train.shape)  
     return x_train, y_train
-
-# x_train1, y_train1 = reformat_dataset(partition_0_dataset)

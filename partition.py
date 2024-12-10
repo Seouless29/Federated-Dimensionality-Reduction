@@ -40,7 +40,7 @@ def balanced_dirichlet_partition(dataset, partitions_number=10, alpha=0.5, seed=
     """
     np.random.seed(seed)
     
-    y_train = dataset.targets
+    y_train = np.array(dataset.targets)
     num_classes = len(np.unique(y_train))
     net_dataidx_map = {}
     class_indices = {k: np.where(y_train == k)[0] for k in range(num_classes)}

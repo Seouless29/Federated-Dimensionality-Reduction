@@ -1,7 +1,6 @@
 import numpy as np
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
-from tensorflow.keras.datasets import mnist
 
 # https://scikit-learn.org/dev/modules/generated/sklearn.decomposition.PCA.html
 class PCADigitReducer:
@@ -77,15 +76,3 @@ class PCADigitReducer:
         plt.axis('off')
 
         plt.show()
-
-
-
-# Do the thing
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
-x_train_flattened = x_train.reshape(x_train.shape[0], -1)
-pca_reducer = PCADigitReducer(n_components=100)
-x_train_reduced = pca_reducer.fit_transform(x_train_flattened)
-x_train_reconstructed = pca_reducer.inverse_transform(x_train_reduced)
-
-# Visualize the original and PCA-reconstructed image side by side
-pca_reducer.visualize_comparison(x_train_flattened, x_train_reconstructed, index=0)

@@ -5,8 +5,9 @@ def train(epoch,network,train_loader,optimizer,log_interval,train_losses,train_c
     network.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         optimizer.zero_grad()
-        data = data.detach()
+        data = data.detach()       
         output = network(data)
+        # print(f"Output shape: {output.shape}, Target shape: {target.shape}")
         loss = F.nll_loss(output, target)
         loss.backward()
         optimizer.step()

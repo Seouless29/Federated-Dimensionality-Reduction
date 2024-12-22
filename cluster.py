@@ -34,7 +34,7 @@ class Cluster:
 
         label_distributions = np.zeros((partitions_number, num_classes))
         for i, indices in net_dataidx_map.items():
-            indices = np.array(indices) # motzt bei cifar
+            targets = np.array(targets)
             labels = targets[indices]
             label_counts = np.bincount(labels, minlength=num_classes)
             label_distributions[i] = label_counts

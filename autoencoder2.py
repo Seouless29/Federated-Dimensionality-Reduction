@@ -8,11 +8,11 @@ class Autoencoder2(nn.Module):
 
         # Encoder
         self.encoder = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1),  # (28,28,1) -> (28,28,32)
+            nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1),  # dim: (28,28,1) -> (28,28,32)
             nn.ReLU(),
             nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(2, 2),  # Downsample (14,14,32)
+            nn.MaxPool2d(2, 2),  # dim: (14,14,32)
             nn.BatchNorm2d(32),
 
             nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=1),
@@ -20,11 +20,11 @@ class Autoencoder2(nn.Module):
             nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.Conv2d(32, 2, kernel_size=2, stride=1, padding=1),
-            nn.MaxPool2d(2, 2),  # Downsample (7,7,2)
+            nn.MaxPool2d(2, 2),  # dim: (7,7,2)
             nn.BatchNorm2d(2),
 
             nn.Flatten(),
-            nn.Linear(7 * 7 * 2, 100),  # Bottleneck layer (compressed latent space)
+            nn.Linear(7 * 7 * 2, 100),  # dim of latent space change here for dimensions (x,x,x, dim)
             nn.ReLU()
         )
 
@@ -32,7 +32,7 @@ class Autoencoder2(nn.Module):
         self.decoder = nn.Sequential(
             nn.Linear(100, 7 * 7 * 2),  
             nn.ReLU(),
-            nn.Unflatten(1, (2, 7, 7)),  # (batch_size, 2, 7, 7)
+            nn.Unflatten(1, (2, 7, 7)),  # dim: (batch, 2, 7, 7)
 
             nn.ConvTranspose2d(2, 32, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
@@ -40,13 +40,13 @@ class Autoencoder2(nn.Module):
             nn.ReLU(),
             nn.BatchNorm2d(32),
 
-            nn.Upsample(scale_factor=2),  # (batch_size, 32, 14, 14)
+            nn.Upsample(scale_factor=2),  # dim: (batch, 32, 14, 14)
             nn.ConvTranspose2d(32, 32, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
 
-            nn.Upsample(scale_factor=2),  # NEW: (batch_size, 32, 28, 28)
+            nn.Upsample(scale_factor=2),  # dim:: (batch, 32, 28, 28)
             nn.ConvTranspose2d(32, 1, kernel_size=3, stride=1, padding=1),
-            nn.Sigmoid()  # Final output (batch_size, 1, 28, 28)
+            nn.Sigmoid()  # dim: (batch, 1, 28, 28), batchsize defined in main
                 )
 
     def forward(self, x):

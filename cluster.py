@@ -1,72 +1,66 @@
 import numpy as np
 
-class Cluster:
-    def __init__(self, num_clusters=None):
-        """
-        Initialize the Cluster class.
+def dataset_target_mapper(dataset_name):
+    target = {"MNIST" : [0,1,2,3,4,5,6,7,8,9]}
 
-        Args:
-            num_clusters (int): Number of clusters to group partitions into. If None, clustering is skipped.
+    return target[dataset_name]
+
+class FederatedClient:
+    def __init__(self, client_id, data_indices, dataset_name):
+        self.client_id = client_id
+        self.data_indices = data_indices
+        self.targets = dataset_target_mapper(dataset_name)
+        self.num_classes = len(dataset_target_mapper(dataset_name))
+
+    def compute_label_distribution(self):
         """
+        Jeder Client berechnet seine eigene Labelverteilung lokal.
+        """
+        #labels = self.targets[self.data_indices]
+        labels = np.array(self.targets)[self.data_indices]
+        label_counts = np.bincount(labels, minlength=self.num_classes)
+        return label_counts / label_counts.sum()  # Normalisierte Verteilung
+
+class FederatedClusterServer:
+    def __init__(self, num_clusters):
         self.num_clusters = num_clusters
-
-    def apply_clustering(self, net_dataidx_map, targets, num_classes):
+    
+    def aggregate_client_data(self, client_distributions):
         """
-        Apply clustering to group partitions based on label distributions.
-
-        Args:
-            net_dataidx_map (dict): A dictionary where keys are partition IDs and values are lists of sample indices.
-            targets (np.ndarray): Array of class labels for all samples.
-            num_classes (int): The total number of classes in the dataset.
-
-        Returns:
-            clustered_net_dataidx_map (dict): Map of clusters to their assigned partition indices.
-            flattened_cluster_map (dict): Map of clusters to a flattened list of sample indices.
+        Aggregiert die Labelverteilungen aller Clients.
         """
-        if self.num_clusters is None:
-            return net_dataidx_map, {}
-
-        partitions_number = len(net_dataidx_map)
-
-        max_label = max(targets)
-        if max_label >= num_classes:
-            num_classes = max_label + 1
-
-        label_distributions = np.zeros((partitions_number, num_classes))
-        for i, indices in net_dataidx_map.items():
-            targets = np.array(targets)
-            labels = targets[indices]
-            label_counts = np.bincount(labels, minlength=num_classes)
-            label_distributions[i] = label_counts
-
-        cluster_assignments = np.zeros(partitions_number, dtype=int)
-        cluster_label_totals = np.zeros((self.num_clusters, num_classes))
-
-        for partition_id, label_dist in enumerate(label_distributions):
-            best_cluster = np.argmin(
-                np.sum(cluster_label_totals + label_dist, axis=1)
-            )
-            cluster_assignments[partition_id] = best_cluster
-            cluster_label_totals[best_cluster] += label_dist
-
-        # Build the clustered_net_dataidx_map, removed!!
-        clustered_net_dataidx_map = {}
-        for i in range(partitions_number):
-            cluster_id = cluster_assignments[i]
-            if cluster_id not in clustered_net_dataidx_map:
-                clustered_net_dataidx_map[cluster_id] = []
-            clustered_net_dataidx_map[cluster_id].append(net_dataidx_map[i])
-
-        flattened_cluster_map = {}
-        for cluster_id, partition_indices in clustered_net_dataidx_map.items():
-            flattened_cluster_map[cluster_id] = [idx for partition in partition_indices for idx in partition]
-
-        return flattened_cluster_map
+        return np.array(client_distributions)
+    
+    def perform_greedy_clustering(self, aggregated_data, net_dataidx_map):
+        """
+        Führt ein Greedy-basiertes Clustering ohne KMeans durch und gibt das gewünschte Mapping aus.
+        """
+        num_clients = len(aggregated_data)
+        cluster_assignments = np.full(num_clients, -1)
+        cluster_label_totals = np.zeros((self.num_clusters, aggregated_data.shape[1]))
+        clustered_net_dataidx_map = {i: [] for i in range(self.num_clusters)}
+        
+        for client_id, label_dist in enumerate(aggregated_data):
+            if client_id < self.num_clusters:
+                cluster_assignments[client_id] = client_id
+                cluster_label_totals[client_id] = label_dist
+            else:
+                best_cluster = np.argmin(np.sum(np.abs(cluster_label_totals - label_dist), axis=1))
+                cluster_assignments[client_id] = best_cluster
+                cluster_label_totals[best_cluster] += label_dist
+            
+            clustered_net_dataidx_map[cluster_assignments[client_id]].extend(net_dataidx_map[client_id])
+        
+        return clustered_net_dataidx_map
 
 if __name__ == "__main__":
-    # Example test case
+    # Beispielhafte Daten
     num_classes = 10
     num_clusters = 3
+    num_clients = 7
+    targets = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])  # Simulierte Label
+    
+    # Simulierte Datenzuweisung an Clients
     net_dataidx_map = {
         0: [0, 1, 2],
         1: [3, 4],
@@ -76,10 +70,18 @@ if __name__ == "__main__":
         5: [1,2,3],
         6: [1,2,3]
     }
-    targets = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-
-    cluster = Cluster(num_clusters=num_clusters)
-    flattened_cluster_map = cluster.apply_clustering(net_dataidx_map, targets, num_classes)
-
+    
+    # Erstelle Clients
+    clients = [FederatedClient(cid, indices, "MNIST") for cid, indices in net_dataidx_map.items()]
+    
+    # Jeder Client berechnet seine Labelverteilung
+    client_distributions = [client.compute_label_distribution() for client in clients]
+    
+    # Server führt Clustering durch
+    server = FederatedClusterServer(num_clusters)
+    aggregated_data = server.aggregate_client_data(client_distributions)
+    clustered_net_dataidx_map = server.perform_greedy_clustering(aggregated_data, net_dataidx_map)
+    
+    # Zeige die Clusterzuweisungen
     print("Clustered Net Data Index Map:")
-    print(flattened_cluster_map)
+    print(clustered_net_dataidx_map)

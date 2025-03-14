@@ -46,36 +46,3 @@ class FederatedClusterServer:
             clustered_net_dataidx_map[cluster_assignments[client_id]].extend(net_dataidx_map[client_id])
         
         return clustered_net_dataidx_map
-
-if __name__ == "__main__":
-    # Beispielhafte Daten
-    num_classes = 10
-    num_clusters = 3
-    num_clients = 7
-    targets = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])  # Simulierte Label
-    
-    # Simulierte Datenzuweisung an Clients
-    net_dataidx_map = {
-        0: [0, 1, 2],
-        1: [3, 4],
-        2: [5, 6, 7],
-        3: [8, 9],
-        4: [9,9],
-        5: [1,2,3],
-        6: [1,2,3]
-    }
-    
-    # Erstelle Clients
-    clients = [FederatedClient(cid, indices, targets, num_classes) for cid, indices in net_dataidx_map.items()]
-    
-    # Jeder Client berechnet seine Labelverteilung
-    client_distributions = [client.compute_label_distribution() for client in clients]
-    
-    # Server führt Clustering durch
-    server = FederatedClusterServer(num_clusters)
-    aggregated_data = server.aggregate_client_data(client_distributions)
-    clustered_net_dataidx_map = server.perform_greedy_clustering(aggregated_data, net_dataidx_map)
-    
-    # Zeige die Clusterzuweisungen
-    print("Clustered Net Data Index Map:")
-    print(clustered_net_dataidx_map)

@@ -20,6 +20,6 @@ Libraries to install
 
 use pip install (missing library)
 
-Results is the folder where pictures are stored
+Final Experiments are the experiments considered for the results
 
 Playground are remnants of the experiments left for future
